@@ -1,1 +1,1 @@
-cscript /nologo _cleanFiles.vbs
+cscript /nologo _cleanFiles.vbs > __conout.bak
