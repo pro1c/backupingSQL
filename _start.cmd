@@ -1,0 +1,1 @@
+cscript /nologo _cleanFiles.vbs
