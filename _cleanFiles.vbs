@@ -3,23 +3,63 @@
 
 '; all erase except:
 '; 1. last 3 week (24)
-'; 2. each 1, 8, 15, 22 day of month for last 10 week (10)
+'; 2. each 1, 8, 15, 22 day of month for last 20 week (20)
 '; 3. each 1, 15 day of month for last 12 month (24)
-'; 4. each first day 1, 4, 7, 10 month of year 
+'; 4. each first day 1, 4, 7, 10 month of years 
 
-Sub processFile(objFile)
+Function processFile(objFile)
 	
 	Dim fileMustBeErase
 	Dim creationDate
+		
+	fileMustBeErase = True
 	
-	Set fileMustBeErase = True
-	Set creationDate = objFile.DateCreated
+	' by stored creation date
+	creationDate = objFile.DateCreated
+	' or by name date
+	creationDate = Mid(objFile.Name, InStr(objFile.Name, "backup")+7, 10)
+	creationDate = "" & Mid(creationDate, 9, 2) & "/" & Mid(creationDate, 6, 2) & "/" & Mid(creationDate, 1, 4)
+	creationDate = CDate(creationDate)
+	'WScript.Echo creationDate
 	
-	If (creationDate)
-	
-	WScript.Echo objFile.Name+" -- " & objFile.DateCreated
+	Dim info
+	Dim state
+	info = "Check file: " & objFile.ShortPath & " -- " & objFile.DateCreated & " ---- " & Now
 
-End Sub
+	If (Day(creationDate) = 1 And (Month(creationDate)=1 Or Month(creationDate)=4 Or Month(creationDate)=7 Or Month(creationDate)=10)) Then
+		fileMustBeErase = False
+		state = "4. each first day 1, 4, 7, 10 month of years"
+	End If
+	
+	If ((Day(creationDate) = 1 Or Day(creationDate) = 15) And creationDate > DateAdd("m", -24, Now)) Then
+		fileMustBeErase = False
+		state = "3. each 1, 15 day of month for last 12 month"
+	End If
+	
+	If ((Day(creationDate) = 1 Or Day(creationDate) = 8 Or Day(creationDate) = 15 Or Day(creationDate) = 22) And creationDate > DateAdd("ww", -20, Now)) Then
+		fileMustBeErase = False
+		state = "2. each 1, 8, 15, 22 day of month for last 20 week"
+	End If
+	
+	If (creationDate > DateAdd("ww", -3, Now)) Then
+		fileMustBeErase = False
+		state = "1. last 3 week"
+	End If
+	
+	If (creationDate > Now) Then
+		fileMustBeErase = False
+		state = "Skipped because in future"
+	End If
+	
+	If fileMustBeErase Then
+		state = "Need to clean"
+	End If
+	
+	WScript.Echo info & " : " & state
+	
+	processFile = fileMustBeErase
+
+End Function
 
 Sub processFolder(folderPath)
 	
@@ -42,7 +82,9 @@ Sub processFolder(folderPath)
 	For Each objFile in colFiles
 		If (Right(objFile.Name,4) = ".bak") Then
 '			WScript.Echo folderPath+"  "+objFiles.Name
-			Call processFile(objFile)
+			If (processFile(objFile) = True) Then
+				objFSO.DeleteFile(objFile.Path)
+			End If
 		End If
 	Next
 	
